@@ -11,10 +11,12 @@ class Grille(tk.Canvas):
 
         tk.Canvas.__init__(self, boss, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
                            scrollregion=(0, 0, 5000, 1000))
+        self.surbrillance = self.create_rectangle(0, 0, 0, 0, fill=palette["bg2"])
 
         self.bind("<MouseWheel>", self.scroll_vertical)
         self.bind("<Shift-MouseWheel>", self.scroll_horizontal)
         self.bind("<B1-ButtonRelease>", self.ajouter_note)
+        self.bind("<Motion>", self.deplacement_souris)
 
         self.bordure = 50
         self.intitules = 100
@@ -22,6 +24,14 @@ class Grille(tk.Canvas):
         self.hauteur = 20
 
         self.tracer_lignes()
+
+    def deplacement_souris(self, event):
+        position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) * 4 // self.longueur_sec
+        note = (round(self.canvasy(event.y)) - self.bordure) // self.hauteur
+        if (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
+            pos_y = self.bordure + note * self.hauteur
+            self.coords(self.surbrillance, self.bordure, pos_y,
+                        self.longueur_totale * self.longueur_sec + self.bordure + self.intitules, pos_y+self.hauteur)
 
     def scroll_horizontal(self, event):
         self.xview_scroll(-event.delta//50, tk.UNITS)
@@ -44,9 +54,15 @@ class Grille(tk.Canvas):
     def ajouter_note(self, event):
         position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) * 4 // self.longueur_sec
         note = (round(self.canvasy(event.y)) - self.bordure) // self.hauteur
-        if (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
+        detecte = False
+        for rectangle in self.liste_rectangles:
+            if rectangle.note_encodage.position == position and rectangle.numero_note == note:
+                detecte = True
+                self.delete(rectangle.sprite)
+                self.liste_rectangles.remove(rectangle)
+        if not detecte and (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
             print(position, notes[note][0])
-            self.liste_rectangles.append(RectangleNote(self, note, position))  # TODO : prendre en compte duree=0.25
+            self.liste_rectangles.append(RectangleNote(self, note, position))
 
 
 class RectangleNote:
