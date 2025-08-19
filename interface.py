@@ -1,6 +1,7 @@
 import tkinter as tk
 import encodage
 import winsound
+import os
 
 
 class Grille(tk.Canvas):
@@ -70,7 +71,7 @@ class RectangleNote:
     def __init__(self, boss, numero_note, position):
         self.boss = boss
         self.numero_note = numero_note
-        self.note_encodage = encodage.Note(notes[self.numero_note][1], 1000, 250, position*250)
+        self.note_encodage = encodage.Note(notes[self.numero_note][1], 10000, 250, position*250)
         pos_x = self.boss.bordure+self.boss.intitules+(position*self.boss.longueur_sec//4)
         pos_y = self.boss.bordure+self.numero_note*self.boss.hauteur
         self.sprite = self.boss.create_rectangle(pos_x, pos_y, pos_x+(self.boss.longueur_sec//4), pos_y+self.boss.hauteur,
@@ -92,15 +93,27 @@ class Interface:
         self.scrollbarx = tk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, bd=1)
         self.scrollbary = tk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, bd=1)
         self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
+        self.bou1 = tk.Button(self.fen, text="Exporter", command=self.exporter_son)
 
         self.grille.grid(row=0, column=0)
         self.scrollbarx.grid(row=1, column=0, sticky=tk.EW)
         self.scrollbary.grid(row=0, column=1, sticky=tk.NS)
+        self.bou1.grid(row=0, column=2)
 
     def recuperer_notes(self):
-        partition = encodage.Partition(100)
+        longueur_max = 0
         for rectangle in self.grille.liste_rectangles:
-            partition.ajouter(rectangle.encodage_note)
+            longueur_max = max(rectangle.note_encodage.position + rectangle.note_encodage.duree, longueur_max)
+        partition = encodage.Partition(longueur_max)
+        for rectangle in self.grille.liste_rectangles:
+            partition.ajouter(rectangle.note_encodage)
+        return partition
+
+    def exporter_son(self):
+        fichier = encodage.Fichier()
+        fichier.convertir_notes(self.recuperer_notes())
+        fichier.ecrire("resultat.wav")
+        os.startfile("resultat.wav")
 
     def lancer(self):
         self.fen.mainloop()

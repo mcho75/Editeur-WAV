@@ -53,7 +53,7 @@ class Fichier:
                 f.write(struct.pack("hh", i[0], i[1]))
 
     def convertir_notes(self, partition):
-        self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate)]
+        self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
         for note in partition.liste_notes:
             for k in range(note.position*self.sample_rate//1000, (note.position+note.duree)*self.sample_rate//1000):
                 valeur = int(note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
