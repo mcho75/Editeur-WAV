@@ -55,7 +55,7 @@ class Fichier:
     def convertir_notes(self, partition):
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate)]
         for note in partition.liste_notes:
-            for k in range(note.position*self.sample_rate, (note.position+note.duree)*self.sample_rate):
+            for k in range(note.position*self.sample_rate//1000, (note.position+note.duree)*self.sample_rate//1000):
                 valeur = int(note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
                 self.echantillons[k][0] += valeur
                 self.echantillons[k][1] += valeur

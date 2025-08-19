@@ -56,7 +56,7 @@ class Grille(tk.Canvas):
         note = (round(self.canvasy(event.y)) - self.bordure) // self.hauteur
         detecte = False
         for rectangle in self.liste_rectangles:
-            if rectangle.note_encodage.position == position and rectangle.numero_note == note:
+            if rectangle.note_encodage.position // 250 == position and rectangle.numero_note == note:
                 detecte = True
                 self.delete(rectangle.sprite)
                 self.liste_rectangles.remove(rectangle)
@@ -70,8 +70,8 @@ class RectangleNote:
     def __init__(self, boss, numero_note, position):
         self.boss = boss
         self.numero_note = numero_note
-        self.note_encodage = encodage.Note(notes[self.numero_note][1], 1000, 1, position)
-        pos_x = self.boss.bordure+self.boss.intitules+(self.note_encodage.position*self.boss.longueur_sec//4)
+        self.note_encodage = encodage.Note(notes[self.numero_note][1], 1000, 250, position*250)
+        pos_x = self.boss.bordure+self.boss.intitules+(position*self.boss.longueur_sec//4)
         pos_y = self.boss.bordure+self.numero_note*self.boss.hauteur
         self.sprite = self.boss.create_rectangle(pos_x, pos_y, pos_x+(self.boss.longueur_sec//4), pos_y+self.boss.hauteur,
                                                  width=0, fill=palette["accent"])
