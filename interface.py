@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 import encodage
 import winsound
 import os
@@ -19,7 +20,7 @@ class Grille(tk.Canvas):
         self.bind("<B1-ButtonRelease>", self.ajouter_note)
         self.bind("<Motion>", self.deplacement_souris)
 
-        self.bordure = 50
+        self.bordure = 20
         self.intitules = 100
         self.longueur_sec = 50
         self.hauteur = 20
@@ -50,7 +51,7 @@ class Grille(tk.Canvas):
             pos_y = i * self.hauteur + self.bordure
             self.create_line(self.bordure, pos_y, self.longueur_totale*self.longueur_sec+self.intitules+self.bordure, pos_y, fill=palette["bg3"])
         for i in range(len(notes)):
-            self.create_text(self.bordure+self.intitules-10, self.bordure+self.hauteur*i+self.hauteur//2, text=notes[i][0], anchor=tk.E, fill=palette["fg"])
+            self.create_text(self.bordure+self.intitules-10, self.bordure+self.hauteur*i+self.hauteur//2, text=notes[i][0], anchor=tk.E, fill=palette["fg1"])
 
     def ajouter_note(self, event):
         position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) * 4 // self.longueur_sec
@@ -88,17 +89,29 @@ class Interface:
     def __init__(self):
 
         self.fen = tk.Tk()
+        self.fen.config(bg=palette["bg2"])
+        self.fen.title("Editeur WAV")
         self.fen.resizable(False, False)
-        self.grille = Grille(self.fen)
-        self.scrollbarx = tk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, bd=1)
-        self.scrollbary = tk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, bd=1)
-        self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
-        self.bou1 = tk.Button(self.fen, text="Exporter", command=self.exporter_son)
 
-        self.grille.grid(row=0, column=0)
-        self.scrollbarx.grid(row=1, column=0, sticky=tk.EW)
-        self.scrollbary.grid(row=0, column=1, sticky=tk.NS)
-        self.bou1.grid(row=0, column=2)
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TScrollbar", troughcolor=palette["bg2"], background=palette["fg1"], arrowcolor=palette["bg1"], bordercolor=palette["bg3"])
+        style.configure("TButton", background=palette["fg1"], foreground=palette["bg1"], relief=tk.FLAT)
+        style.map("TScrollbar", background=[("active", palette["fg2"])])
+        style.map("TButton", background=[("active", palette["fg2"])])
+
+        self.grille = Grille(self.fen)
+        self.scrollbarx = ttk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, style="TScrollbar")
+        self.scrollbary = ttk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, style="TScrollbar")
+        self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
+        self.frame = tk.Frame(self.fen, borderwidth=2, bg=palette["bg1"])
+        self.bou = ttk.Button(self.frame, text="Exporter", command=self.exporter_son, style="TButton")
+
+        self.grille.grid(row=0, column=0, padx=(10, 0), pady=(10, 0))
+        self.scrollbarx.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=tk.EW)
+        self.scrollbary.grid(row=0, column=1, pady=10, sticky=tk.NS)
+        self.frame.grid(row=0, column=2, rowspan=2, padx=10, pady=10, sticky=tk.NSEW)
+        self.bou.grid(row=0, column=0, padx=10, pady=10)
 
     def recuperer_notes(self):
         longueur_max = 0
@@ -112,13 +125,13 @@ class Interface:
     def exporter_son(self):
         fichier = encodage.Fichier()
         fichier.convertir_notes(self.recuperer_notes())
-        fichier.ecrire("resultat.wav")
-        os.startfile("resultat.wav")
+        fichier.ecrire("test.wav")
+        os.startfile("test.wav")
 
     def lancer(self):
         self.fen.mainloop()
 
-palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg":"#A5A59D", "accent":"#05BFBD"}
+palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2", "accent":"#05BFBD"}
 note_names = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 notes = []
 for n in range(0, 120):
