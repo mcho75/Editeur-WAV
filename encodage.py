@@ -50,22 +50,43 @@ class Fichier:
             header += struct.pack("I", data_size)
             f.write(header)
             for i in self.echantillons:
-                f.write(struct.pack("hh", i[0], i[1]))
+                f.write(struct.pack("hh", max(-32768, min(i[0], 32767)), max(-32768, min(i[0], 32767))))
 
     def convertir_notes(self, partition):
-        attenuation = 1 / 20
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
         for note in partition.liste_notes:
             i = 0
-            for k in range(note.position*self.sample_rate//1000, (note.position+note.duree)*self.sample_rate//1000):
-                facteur = 1.0
-                if i < self.sample_rate * attenuation:
-                    facteur = i / (self.sample_rate * attenuation)
-                if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
-                    facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
-                valeur = int(facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
-                self.echantillons[k][0] += valeur
-                self.echantillons[k][1] += valeur
+            for k in range(0, note.duree*self.sample_rate//1000):
+                valeur = 0
+
+                if note.instrument == 0:   # sinusoide
+                    # facteur = 1.0
+                    # attenuation = 1 / 20
+                    # if i < self.sample_rate * attenuation:
+                    #     facteur = i / (self.sample_rate * attenuation)
+                    # if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
+                    #     facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
+                    # valeur = int(facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
+                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate)
+
+                if note.instrument == 1:   # piano
+                    valeur = 0.6 * math.sin(2 * math.pi * note.frequence * k / self.sample_rate) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur += 0.4 * math.sin(4 * math.pi * note.frequence * k / self.sample_rate) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur += valeur ** 3
+                    valeur *= 1 + 16 * k / self.sample_rate * math.exp(-6 * k / self.sample_rate)
+                    valeur *= note.amplitude
+
+                if note.instrument == 2:   # xylophone
+                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur *= math.exp(-8 * k / self.sample_rate)
+
+                if note.instrument == 3:   # triangle
+                    for i in range(10):
+                        valeur += (-1) ** i * math.sin(2 * math.pi * (2 * i - 1) * note.frequence * k / self.sample_rate) / (2 * i + 1) ** 2
+                    valeur *= 8 / math.pi / math.pi * note.amplitude
+
+                self.echantillons[k + note.position * self.sample_rate // 1000][0] += int(valeur)
+                self.echantillons[k + note.position * self.sample_rate // 1000][1] += int(valeur)
                 i += 1
         # print(self.echantillons)
 
@@ -89,11 +110,12 @@ class Fichier:
 
 class Note:
 
-    def __init__(self, frequence, amplitude, duree, position):
+    def __init__(self, frequence, amplitude, duree, position, instrument):
         self.frequence = frequence
         self.amplitude = amplitude
         self.duree = duree
         self.position = position
+        self.instrument = instrument
 
 
 class Partition:

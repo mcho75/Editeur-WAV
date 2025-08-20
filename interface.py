@@ -12,6 +12,7 @@ class Grille(tk.Canvas):
         self.liste_rectangles = []
         self.rectangle_survole = None
         self.dragging = 0
+        self.instrument_var = tk.IntVar()
 
         tk.Canvas.__init__(self, boss, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
                            scrollregion=(0, 0, 5000, 1000))
@@ -40,11 +41,9 @@ class Grille(tk.Canvas):
         self.config(cursor="arrow")
         self.rectangle_survole = None
         for rectangle in self.liste_rectangles:
-            self.itemconfig(rectangle.sprite, fill=palette["fg2"])
             if rectangle.note_encodage.position <= position * 250 < rectangle.note_encodage.position + rectangle.note_encodage.duree:
                 if rectangle.numero_note == note:
                     self.rectangle_survole = rectangle
-                    self.itemconfig(rectangle.sprite, fill=palette["fg1"])
                     if position - (self.rectangle_survole.note_encodage.position + self.rectangle_survole.note_encodage.duree) / 250 > -0.3:
                         self.config(cursor="sb_h_double_arrow")
                     if position - rectangle.note_encodage.position / 250 < 0.3:
@@ -94,21 +93,21 @@ class Grille(tk.Canvas):
                 self.rectangle_survole = None
             elif (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
                 print(position, notes[note][0])
-                self.liste_rectangles.append(RectangleNote(self, note, position*250))
+                self.liste_rectangles.append(RectangleNote(self, note, position*250, self.instrument_var.get()))
                 self.rectangle_survole = self.liste_rectangles[-1]
         self.dragging = 0
 
 
 class RectangleNote:
 
-    def __init__(self, boss, numero_note, position):
+    def __init__(self, boss, numero_note, position, instrument):
         self.boss = boss
         self.numero_note = numero_note
-        self.note_encodage = encodage.Note(notes[self.numero_note][1], 10000, 250, round(position // 250) * 250)
+        self.note_encodage = encodage.Note(notes[self.numero_note][1], 10000, 250, round(position // 250) * 250, instrument)
         pos_x = self.boss.bordure + self.boss.intitules + (round(position // 250) * self.boss.longueur_sec // 4)
         pos_y = self.boss.bordure + self.numero_note * self.boss.hauteur
         self.sprite = self.boss.create_rectangle(pos_x, pos_y, pos_x+(self.boss.longueur_sec//4), pos_y+self.boss.hauteur,
-                                                 width=1, fill=palette["fg2"], outline=palette["fg1"])
+                                                 width=1, outline=palette["bg1"], fill=palette["instrument"+str(instrument)])
         if notes[self.numero_note][1] >= 37:
             winsound.Beep(notes[self.numero_note][1], 250)
 
@@ -131,17 +130,23 @@ class Interface:
         style.theme_use("clam")
         style.configure("TScrollbar", troughcolor=palette["bg2"], background=palette["fg1"], arrowcolor=palette["bg1"], bordercolor=palette["bg3"])
         style.configure("TButton", background=palette["fg1"], foreground=palette["bg1"], relief=tk.FLAT, width=20)
+        style.configure("TRadiobutton", background=palette["bg2"], foreground=palette["fg1"], relief=tk.FLAT, width=20)
         style.map("TScrollbar", background=[("active", palette["fg2"])])
         style.map("TButton", background=[("active", palette["fg2"])])
+        style.map("TRadiobutton", background=[("active", palette["bg2"])])
 
         self.grille = Grille(self.fen)
         self.scrollbarx = ttk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, style="TScrollbar")
         self.scrollbary = ttk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, style="TScrollbar")
         self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
-        self.frame = tk.Frame(self.fen, borderwidth=2, bg=palette["bg1"])
+        self.frame = tk.Frame(self.fen, bg=palette["bg1"])
         self.bou1 = ttk.Button(self.frame, text="Exporter", command=self.exporter_son, style="TButton")
         self.bou2 = ttk.Button(self.frame, text="Sauvegarder", command=self.exporter_son, style="TButton")
         self.bou3 = ttk.Button(self.frame, text="Ouvrir", command=self.exporter_son, style="TButton")
+        self.instruments = tk.Frame(self.frame, bg=palette["bg2"])
+        for i in range(len(instruments)):
+            ttk.Radiobutton(self.instruments, text=instruments[i], variable=self.grille.instrument_var, value=i,
+                            style="TRadiobutton").grid(row=i, column=0, padx=10, pady=(int(i==0)*10, int(i==len(instruments)-1)*10))
 
         self.grille.grid(row=0, column=0, padx=(10, 0), pady=(10, 0))
         self.scrollbarx.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=tk.EW)
@@ -150,6 +155,7 @@ class Interface:
         self.bou1.grid(row=0, column=0, padx=10, pady=10)
         self.bou2.grid(row=1, column=0, padx=10)
         self.bou3.grid(row=2, column=0, padx=10, pady=10)
+        self.instruments.grid(row=3, column=0, padx=10, pady=10)
 
     def recuperer_notes(self):
         longueur_max = 0
@@ -169,9 +175,11 @@ class Interface:
     def lancer(self):
         self.fen.mainloop()
 
-palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2", "accent":"#05BFBD"}
+palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2",
+           "instrument0":"#293462", "instrument1":"#1CD6CE", "instrument2":"#FEDB39", "instrument3":"#D61C4E"}
 note_names_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 note_names_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle"]
 notes = []
 for n in range(0, 120):
     octave = (n // 12) - 1
