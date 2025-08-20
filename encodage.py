@@ -2,7 +2,7 @@ import math
 import struct
 
 
-class Fichier:
+class FichierWAV:
 
     def __init__(self):
         self.riff = 1179011410
@@ -110,12 +110,13 @@ class Fichier:
 
 class Note:
 
-    def __init__(self, frequence, amplitude, duree, position, instrument):
+    def __init__(self, frequence, numero_note, amplitude, duree, position, instrument):
         self.frequence = frequence
         self.amplitude = amplitude
         self.duree = duree
         self.position = position
         self.instrument = instrument
+        self.numero_note = numero_note
 
 
 class Partition:
@@ -126,3 +127,16 @@ class Partition:
 
     def ajouter(self, note):
         self.liste_notes.append(note)
+
+    def ouvrir(self, chemin):
+        with open(chemin, "r") as f:
+            lignes = f.readlines()
+        for ligne in lignes:
+            frequence, numero_note, amplitude, duree, position, instrument = [int(i) for i in ligne.split(" ")]
+            self.duree_totale = max(self.duree_totale, position+duree)
+            self.ajouter(Note(frequence, numero_note, amplitude, duree, position, instrument))
+
+    def sauvegarder(self, chemin):
+        with open(chemin, "w") as f:
+            for note in self.liste_notes:
+                f.write("{} {} {} {} {} {}\n".format(note.frequence, note.numero_note, note.amplitude, note.duree, note.position, note.instrument))

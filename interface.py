@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 import encodage
 import winsound
 import os
@@ -42,7 +42,7 @@ class Grille(tk.Canvas):
         self.rectangle_survole = None
         for rectangle in self.liste_rectangles:
             if rectangle.note_encodage.position <= position * 250 < rectangle.note_encodage.position + rectangle.note_encodage.duree:
-                if rectangle.numero_note == note:
+                if rectangle.note_encodage.numero_note == note:
                     self.rectangle_survole = rectangle
                     if position - (self.rectangle_survole.note_encodage.position + self.rectangle_survole.note_encodage.duree) / 250 > -0.3:
                         self.config(cursor="sb_h_double_arrow")
@@ -93,27 +93,30 @@ class Grille(tk.Canvas):
                 self.rectangle_survole = None
             elif (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
                 print(position, notes[note][0])
-                self.liste_rectangles.append(RectangleNote(self, note, position*250, self.instrument_var.get()))
+                self.liste_rectangles.append(RectangleNote(self, note, position*250, 250, self.instrument_var.get()))
                 self.rectangle_survole = self.liste_rectangles[-1]
+                winsound.Beep(notes[note][1], 250)
         self.dragging = 0
+
+    def importer_partition(self, partition):
+        while len(self.liste_rectangles) > 0:
+            self.delete(self.liste_rectangles[0].sprite)
+            self.liste_rectangles.pop(0)
+        for note in partition.liste_notes:
+            self.liste_rectangles.append(RectangleNote(self, note.numero_note, note.position, note.duree, note.instrument))
 
 
 class RectangleNote:
 
-    def __init__(self, boss, numero_note, position, instrument):
+    def __init__(self, boss, numero_note, position, duree, instrument):
         self.boss = boss
-        self.numero_note = numero_note
-        self.note_encodage = encodage.Note(notes[self.numero_note][1], 10000, 250, round(position // 250) * 250, instrument)
-        pos_x = self.boss.bordure + self.boss.intitules + (round(position // 250) * self.boss.longueur_sec // 4)
-        pos_y = self.boss.bordure + self.numero_note * self.boss.hauteur
-        self.sprite = self.boss.create_rectangle(pos_x, pos_y, pos_x+(self.boss.longueur_sec//4), pos_y+self.boss.hauteur,
-                                                 width=1, outline=palette["bg1"], fill=palette["instrument"+str(instrument)])
-        if notes[self.numero_note][1] >= 37:
-            winsound.Beep(notes[self.numero_note][1], 250)
+        self.note_encodage = encodage.Note(notes[numero_note][1], numero_note, 10000, duree, round(position // 250) * 250, instrument)
+        self.sprite = self.boss.create_rectangle(0, 0, 0, 0, width=1, outline=palette["bg1"], fill=palette["instrument"+str(instrument)])
+        self.actualiser()
 
     def actualiser(self):
         pos_x = self.boss.bordure + self.boss.intitules + (self.note_encodage.position // 250 * self.boss.longueur_sec // 4)
-        pos_y = self.boss.bordure + self.numero_note * self.boss.hauteur
+        pos_y = self.boss.bordure + self.note_encodage.numero_note * self.boss.hauteur
         self.boss.coords(self.sprite, pos_x, pos_y, pos_x+(self.boss.longueur_sec*self.note_encodage.duree//1000), pos_y+self.boss.hauteur)
 
 
@@ -141,8 +144,8 @@ class Interface:
         self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
         self.frame = tk.Frame(self.fen, bg=palette["bg1"])
         self.bou1 = ttk.Button(self.frame, text="Exporter", command=self.exporter_son, style="TButton")
-        self.bou2 = ttk.Button(self.frame, text="Sauvegarder", command=self.exporter_son, style="TButton")
-        self.bou3 = ttk.Button(self.frame, text="Ouvrir", command=self.exporter_son, style="TButton")
+        self.bou2 = ttk.Button(self.frame, text="Enregistrer", command=self.sauvegarder_fichier, style="TButton")
+        self.bou3 = ttk.Button(self.frame, text="Ouvrir", command=self.ouvrir_fichier, style="TButton")
         self.instruments = tk.Frame(self.frame, bg=palette["bg2"])
         for i in range(len(instruments)):
             ttk.Radiobutton(self.instruments, text=instruments[i], variable=self.grille.instrument_var, value=i,
@@ -157,6 +160,18 @@ class Interface:
         self.bou3.grid(row=2, column=0, padx=10, pady=10)
         self.instruments.grid(row=3, column=0, padx=10, pady=10)
 
+    def ouvrir_fichier(self):
+        chemin = filedialog.askopenfilename(title="Ouvrir", filetypes=[("Fichier texte", "*.txt"), ("Tous les fichiers", "*.*")])
+        partition = encodage.Partition(0)
+        partition.ouvrir(chemin)
+        self.grille.importer_partition(partition)
+
+    def sauvegarder_fichier(self):
+        chemin = filedialog.asksaveasfilename(title="Enregistrer", filetypes=[("Fichier texte", "*.txt"), ("Tous les fichiers", "*.*")],
+                                              defaultextension=".txt")
+        partition = self.recuperer_notes()
+        partition.sauvegarder(chemin)
+
     def recuperer_notes(self):
         longueur_max = 0
         for rectangle in self.grille.liste_rectangles:
@@ -167,7 +182,7 @@ class Interface:
         return partition
 
     def exporter_son(self):
-        fichier = encodage.Fichier()
+        fichier = encodage.FichierWAV()
         fichier.convertir_notes(self.recuperer_notes())
         fichier.ecrire("test.wav")
         os.startfile("test.wav")
