@@ -53,12 +53,20 @@ class Fichier:
                 f.write(struct.pack("hh", i[0], i[1]))
 
     def convertir_notes(self, partition):
+        attenuation = 1 / 20
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
         for note in partition.liste_notes:
+            i = 0
             for k in range(note.position*self.sample_rate//1000, (note.position+note.duree)*self.sample_rate//1000):
-                valeur = int(note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
+                facteur = 1.0
+                if i < self.sample_rate * attenuation:
+                    facteur = i / (self.sample_rate * attenuation)
+                if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
+                    facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
+                valeur = int(facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
                 self.echantillons[k][0] += valeur
                 self.echantillons[k][1] += valeur
+                i += 1
         # print(self.echantillons)
 
     def interpolation(self):
