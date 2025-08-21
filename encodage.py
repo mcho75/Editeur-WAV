@@ -83,13 +83,13 @@ class FichierWAV:
                     valeur *= 8 / math.pi / math.pi * note.amplitude
 
                 if note.instrument == 4:   # ocarina
-                    facteur = 1.0
+                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
                     attenuation = 1 / 20
                     if i < self.sample_rate * attenuation:
-                        facteur = i / (self.sample_rate * attenuation)
+                        valeur *= i / (self.sample_rate * attenuation)
                     if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
-                        facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
-                    valeur = facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
+                        valeur *= (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
+                    valeur *= math.exp(-k / self.sample_rate)
 
                 self.echantillons[k + note.position * self.sample_rate // 1000][0] += int(valeur)
                 self.echantillons[k + note.position * self.sample_rate // 1000][1] += int(valeur)
