@@ -1,5 +1,6 @@
 import math
 import struct
+import random
 
 
 class FichierWAV:
@@ -56,34 +57,39 @@ class FichierWAV:
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
         for note in partition.liste_notes:
             i = 0
+            offset = random.randint(0, self.sample_rate//note.frequence)
             for k in range(0, note.duree*self.sample_rate//1000):
                 valeur = 0
 
                 if note.instrument == 0:   # sinusoide
-                    # facteur = 1.0
-                    # attenuation = 1 / 20
-                    # if i < self.sample_rate * attenuation:
-                    #     facteur = i / (self.sample_rate * attenuation)
-                    # if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
-                    #     facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
-                    # valeur = int(facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate))
-                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
 
                 if note.instrument == 1:   # piano
-                    valeur = 0.6 * math.sin(2 * math.pi * note.frequence * k / self.sample_rate) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
-                    valeur += 0.4 * math.sin(4 * math.pi * note.frequence * k / self.sample_rate) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur = 0.6 * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset)) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur += 0.4 * math.sin(4 * math.pi * note.frequence * (k / self.sample_rate + offset)) * math.exp(-0.0015 * 2 * math.pi * note.frequence * k / self.sample_rate)
                     valeur += valeur ** 3
                     valeur *= 1 + 16 * k / self.sample_rate * math.exp(-6 * k / self.sample_rate)
                     valeur *= note.amplitude
+                    if i >= note.duree * self.sample_rate // 1000 - self.sample_rate / 20:
+                        valeur *= (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate / 20)
 
                 if note.instrument == 2:   # xylophone
-                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * k / self.sample_rate)
+                    valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
                     valeur *= math.exp(-8 * k / self.sample_rate)
 
                 if note.instrument == 3:   # triangle
-                    for i in range(10):
-                        valeur += (-1) ** i * math.sin(2 * math.pi * (2 * i - 1) * note.frequence * k / self.sample_rate) / (2 * i + 1) ** 2
+                    for j in range(10):
+                        valeur += (-1) ** j * math.sin(2 * math.pi * (2 * j - 1) * note.frequence * (k / self.sample_rate + offset)) / (2 * j + 1) ** 2
                     valeur *= 8 / math.pi / math.pi * note.amplitude
+
+                if note.instrument == 4:   # ocarina
+                    facteur = 1.0
+                    attenuation = 1 / 20
+                    if i < self.sample_rate * attenuation:
+                        facteur = i / (self.sample_rate * attenuation)
+                    if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
+                        facteur = (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
+                    valeur = facteur * note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
 
                 self.echantillons[k + note.position * self.sample_rate // 1000][0] += int(valeur)
                 self.echantillons[k + note.position * self.sample_rate // 1000][1] += int(valeur)

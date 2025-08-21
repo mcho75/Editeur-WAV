@@ -110,7 +110,7 @@ class RectangleNote:
 
     def __init__(self, boss, numero_note, position, duree, instrument):
         self.boss = boss
-        self.note_encodage = encodage.Note(notes[numero_note][1], numero_note, 10000, duree, round(position // 250) * 250, instrument)
+        self.note_encodage = encodage.Note(notes[numero_note][1], numero_note, 5000, duree, round(position // 250) * 250, instrument)
         self.sprite = self.boss.create_rectangle(0, 0, 0, 0, width=1, outline=palette["bg1"], fill=palette["instrument"+str(instrument)])
         self.actualiser()
 
@@ -191,10 +191,12 @@ class Interface:
         self.fen.mainloop()
 
 palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2",
-           "instrument0":"#293462", "instrument1":"#1CD6CE", "instrument2":"#FEDB39", "instrument3":"#D61C4E"}
+           "instrument0":"#F94144", "instrument1":"#F3722C", "instrument2":"#F8961E", "instrument3":"#F9844A",
+           "instrument4":"#F9C74F", "instrument5":"#90BE6D", "instrument6":"#43AA8B", "instrument7":"#4D908E",
+           "instrument8":"#577590", "instrument9":"#277DA1"}
 note_names_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 note_names_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle"]
+instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle", "Ocarina"]
 notes = []
 for n in range(0, 120):
     octave = (n // 12) - 1
