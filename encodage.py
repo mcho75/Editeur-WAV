@@ -26,11 +26,13 @@ class FichierWAV:
         self.fmt_type = struct.unpack_from("H", data, 20)[0]
         self.sample_rate = struct.unpack_from("I", data, 24)[0]
         self.bits_per_sample = struct.unpack_from("H", data, 34)[0]
-        self.data_header = struct.unpack_from("I", data, 36)[0]
         self.echantillons = []
-        data_size = struct.unpack_from("I", data, 40)[0]
-        for i in range(44, data_size, self.bits_per_sample // 8 * 2):
-            self.echantillons.append([(struct.unpack_from("hh", data, i))[0], (struct.unpack_from("hh", data, i))[1]])
+        for k in range(0, 71):
+            self.data_header = struct.unpack_from("I", data, k)[0]
+            if self.data_header == 1635017060:
+                data_size = struct.unpack_from("I", data, k+4)[0]
+                for i in range(k + 8, data_size, self.bits_per_sample // 8 * 2):
+                    self.echantillons.append([(struct.unpack_from("hh", data, i))[0], (struct.unpack_from("hh", data, i))[1]])
         # print(self.echantillons)
 
     def ecrire(self, chemin):
@@ -53,13 +55,24 @@ class FichierWAV:
             for i in self.echantillons:
                 f.write(struct.pack("hh", max(-32768, min(i[0], 32767)), max(-32768, min(i[0], 32767))))
 
-    def convertir_notes(self, partition):
+    def convertir_notes(self, partition, samples, notes_associees):
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
         for note in partition.liste_notes:
-            i = 0
             offset = random.randint(0, self.sample_rate//note.frequence)
             for k in range(0, note.duree*self.sample_rate//1000):
                 valeur = 0
+
+                if note.instrument < 0:
+
+                    indice = - note.instrument - 1
+                    if k * note.frequence // notes_associees[indice] < len(samples[indice]):
+                        valeur = samples[indice][k * note.frequence // notes_associees[indice]][0]
+                    if note.duree * self.sample_rate // 1000 < len(samples[indice]):
+                        if k * note.frequence // notes_associees[indice] >= note.duree * self.sample_rate / 1000 - self.sample_rate / 20:
+                            valeur *= (note.duree * self.sample_rate / 1000 - k) * 20 / self.sample_rate
+                    else:
+                        if k * note.frequence // notes_associees[indice] >= len(samples[indice]) - self.sample_rate / 20:
+                            valeur *= (len(samples[indice]) - k) * 20 / self.sample_rate
 
                 if note.instrument == 0:   # sinusoide
                     valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
@@ -70,8 +83,8 @@ class FichierWAV:
                     valeur += valeur ** 3
                     valeur *= 1 + 16 * k / self.sample_rate * math.exp(-6 * k / self.sample_rate)
                     valeur *= note.amplitude
-                    if i >= note.duree * self.sample_rate // 1000 - self.sample_rate / 20:
-                        valeur *= (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate / 20)
+                    if k >= note.duree * self.sample_rate // 1000 - self.sample_rate / 20:
+                        valeur *= (note.duree * self.sample_rate / 1000 - k) / (self.sample_rate / 20)
 
                 if note.instrument == 2:   # xylophone
                     valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
@@ -85,15 +98,14 @@ class FichierWAV:
                 if note.instrument == 4:   # ocarina
                     valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
                     attenuation = 1 / 20
-                    if i < self.sample_rate * attenuation:
-                        valeur *= i / (self.sample_rate * attenuation)
-                    if i >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
-                        valeur *= (note.duree * self.sample_rate / 1000 - i) / (self.sample_rate * attenuation)
+                    if k < self.sample_rate * attenuation:
+                        valeur *= k / (self.sample_rate * attenuation)
+                    if k >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
+                        valeur *= (note.duree * self.sample_rate / 1000 - k) / (self.sample_rate * attenuation)
                     valeur *= math.exp(-k / self.sample_rate)
 
                 self.echantillons[k + note.position * self.sample_rate // 1000][0] += int(valeur)
                 self.echantillons[k + note.position * self.sample_rate // 1000][1] += int(valeur)
-                i += 1
         # print(self.echantillons)
 
     def interpolation(self):
@@ -146,3 +158,12 @@ class Partition:
         with open(chemin, "w") as f:
             for note in self.liste_notes:
                 f.write("{} {} {} {} {} {}\n".format(note.frequence, note.numero_note, note.amplitude, note.duree, note.position, note.instrument))
+
+
+def recuperer_samples(liste_samples):
+    fichier = FichierWAV()
+    resultat = []
+    for sample in liste_samples:
+        fichier.ouvrir("samples/"+sample+".wav")
+        resultat.append(fichier.echantillons)
+    return resultat

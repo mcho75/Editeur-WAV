@@ -147,9 +147,14 @@ class Interface:
         self.bou2 = ttk.Button(self.frame, text="Enregistrer", command=self.sauvegarder_fichier, style="TButton")
         self.bou3 = ttk.Button(self.frame, text="Ouvrir", command=self.ouvrir_fichier, style="TButton")
         self.instruments = tk.Frame(self.frame, bg=palette["bg2"])
+        self.titre_synthe = tk.Label(self.instruments, text="Synthé", bg=palette["bg2"], fg=palette["fg2"], anchor=tk.CENTER)
+        self.titre_sample = tk.Label(self.instruments, text="Samples", bg=palette["bg2"], fg=palette["fg2"], anchor=tk.CENTER)
         for i in range(len(instruments)):
             ttk.Radiobutton(self.instruments, text=instruments[i], variable=self.grille.instrument_var, value=i,
-                            style="TRadiobutton").grid(row=i, column=0, padx=10, pady=(int(i==0)*10, int(i==len(instruments)-1)*10))
+                            style="TRadiobutton").grid(row=i+1, column=0, padx=10)
+        for i in range(len(samples)):
+            ttk.Radiobutton(self.instruments, text=samples_noms[i], variable=self.grille.instrument_var, value=-1-i,
+                            style="TRadiobutton").grid(row=len(instruments)+2+i, column=0, padx=10)
 
         self.grille.grid(row=0, column=0, padx=(10, 0), pady=(10, 0))
         self.scrollbarx.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=tk.EW)
@@ -159,6 +164,8 @@ class Interface:
         self.bou2.grid(row=1, column=0, padx=10)
         self.bou3.grid(row=2, column=0, padx=10, pady=10)
         self.instruments.grid(row=3, column=0, padx=10, pady=10)
+        self.titre_synthe.grid(row=0, column=0, padx=10, pady=10)
+        self.titre_sample.grid(row=len(instruments)+1, column=0, padx=10, pady=10)
 
     def ouvrir_fichier(self):
         chemin = filedialog.askopenfilename(title="Ouvrir", filetypes=[("Fichier texte", "*.txt"), ("Tous les fichiers", "*.*")])
@@ -183,20 +190,29 @@ class Interface:
 
     def exporter_son(self):
         fichier = encodage.FichierWAV()
-        fichier.convertir_notes(self.recuperer_notes())
+        fichier.convertir_notes(self.recuperer_notes(), samples, notes_associees)
         fichier.ecrire("test.wav")
         os.startfile("test.wav")
 
     def lancer(self):
         self.fen.mainloop()
 
+
 palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2",
+           "instrument-1":"#001219", "instrument-2":"#005f73", "instrument-3":"#0a9396", "instrument-4":"#94d2bd",
+           "instrument-5":"#e9d8a6", "instrument-6":"#ee9b00", "instrument-7":"#ca6702", "instrument-8":"#bb3e03",
+           "instrument-9":"#ae2012", "instrument-10":"#9b2226",
            "instrument0":"#F94144", "instrument1":"#F3722C", "instrument2":"#F8961E", "instrument3":"#F9844A",
            "instrument4":"#F9C74F", "instrument5":"#90BE6D", "instrument6":"#43AA8B", "instrument7":"#4D908E",
            "instrument8":"#577590", "instrument9":"#277DA1"}
+instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle", "Ocarina"]
+samples_str = ["basse", "choeur", "clap", "guitare", "piano", "tambour", "violon"]
+samples_noms = ["Basse", "Chœur", "Clap", "Guitare", "Piano", "Tambour", "Violon"]
+notes_associees = [246, 526, 819, 222, 267, 160, 397]
+samples = encodage.recuperer_samples(samples_str)
+
 note_names_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 note_names_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle", "Ocarina"]
 notes = []
 for n in range(0, 120):
     octave = (n // 12) - 1
