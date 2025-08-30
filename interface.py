@@ -208,7 +208,7 @@ palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "
 instruments = ["Sinusoide", "Piano", "Xylophone", "Triangle", "Ocarina"]
 samples_str = ["basse", "choeur", "clap", "guitare", "piano", "tambour", "violon"]
 samples_noms = ["Basse", "Chœur", "Clap", "Guitare", "Piano", "Tambour", "Violon"]
-notes_associees = [246, 526, 819, 222, 267, 160, 397]
+notes_associees = [246, 526, 819, 518, 527, 160, 785]
 samples = encodage.recuperer_samples(samples_str)
 
 note_names_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]

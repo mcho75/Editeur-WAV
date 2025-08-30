@@ -1,6 +1,8 @@
 import math
 import struct
 import random
+import librosa
+import numpy as np
 
 
 class FichierWAV:
@@ -57,22 +59,29 @@ class FichierWAV:
 
     def convertir_notes(self, partition, samples, notes_associees):
         self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
+        sample_shift = np.array([])
         for note in partition.liste_notes:
             offset = random.randint(0, self.sample_rate//note.frequence)
+
+            if note.instrument < 0:
+                steps = 12 * math.log(note.frequence / notes_associees[- note.instrument - 1], 2)
+                tableau = np.array(samples[-note.instrument-1]).astype("float32")
+                stereo = np.array([tableau[:, 0], tableau[:, 1]])
+                sample_shift = (librosa.effects.pitch_shift(stereo / 32767, sr=self.sample_rate, n_steps=steps) * 32767).astype(int)
+
             for k in range(0, note.duree*self.sample_rate//1000):
                 valeur = 0
 
                 if note.instrument < 0:
-
-                    indice = - note.instrument - 1
-                    if k * note.frequence // notes_associees[indice] < len(samples[indice]):
-                        valeur = samples[indice][k * note.frequence // notes_associees[indice]][0]
-                    if note.duree * self.sample_rate // 1000 < len(samples[indice]):
-                        if k * note.frequence // notes_associees[indice] >= note.duree * self.sample_rate / 1000 - self.sample_rate / 20:
+                    # nouveau_k = k * note.frequence // notes_associees[indice]
+                    if k < len(sample_shift[0]):
+                        valeur = sample_shift[0][k]
+                    if note.duree * self.sample_rate // 1000 < len(sample_shift[0]):
+                        if k >= note.duree * self.sample_rate / 1000 - self.sample_rate / 20:
                             valeur *= (note.duree * self.sample_rate / 1000 - k) * 20 / self.sample_rate
                     else:
-                        if k * note.frequence // notes_associees[indice] >= len(samples[indice]) - self.sample_rate / 20:
-                            valeur *= (len(samples[indice]) - k) * 20 / self.sample_rate
+                        if k >= len(sample_shift[0]) - self.sample_rate / 20:
+                            valeur *= (len(sample_shift[0]) - k) * 20 / self.sample_rate
 
                 if note.instrument == 0:   # sinusoide
                     valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
