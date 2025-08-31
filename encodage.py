@@ -35,7 +35,6 @@ class FichierWAV:
                 data_size = struct.unpack_from("I", data, k+4)[0]
                 for i in range(k + 8, data_size, self.bits_per_sample // 8 * 2):
                     self.echantillons.append([(struct.unpack_from("hh", data, i))[0], (struct.unpack_from("hh", data, i))[1]])
-        # print(self.echantillons)
 
     def ecrire(self, chemin):
         data_size = len(self.echantillons) * 2 * self.bits_per_sample // 8 + 44
@@ -58,27 +57,27 @@ class FichierWAV:
                 f.write(struct.pack("hh", max(-32768, min(i[0], 32767)), max(-32768, min(i[0], 32767))))
 
     def convertir_notes(self, partition, samples, notes_associees):
-        self.echantillons = [[0, 0] for i in range(partition.duree_totale*self.sample_rate//1000)]
+        self.echantillons = [[0, 0] for i in range(partition.duree_totale * 60 * 250 // partition.bpm * self.sample_rate // 1000)]
         sample_shift = np.array([])
         for note in partition.liste_notes:
-            offset = random.randint(0, self.sample_rate//note.frequence)
+            offset = random.randint(0, self.sample_rate // note.frequence)
 
             if note.instrument < 0:
-                steps = 12 * math.log(note.frequence / notes_associees[- note.instrument - 1], 2)
+                steps = 12 * math.log(note.frequence / notes_associees[-note.instrument-1], 2)
                 tableau = np.array(samples[-note.instrument-1]).astype("float32")
                 stereo = np.array([tableau[:, 0], tableau[:, 1]])
                 sample_shift = (librosa.effects.pitch_shift(stereo / 32767, sr=self.sample_rate, n_steps=steps) * 32767).astype(int)
 
-            for k in range(0, note.duree*self.sample_rate//1000):
+            for k in range(0, note.duree * 60 * 250 // partition.bpm * self.sample_rate // 1000):
                 valeur = 0
 
                 if note.instrument < 0:
                     # nouveau_k = k * note.frequence // notes_associees[indice]
                     if k < len(sample_shift[0]):
                         valeur = sample_shift[0][k]
-                    if note.duree * self.sample_rate // 1000 < len(sample_shift[0]):
-                        if k >= note.duree * self.sample_rate / 1000 - self.sample_rate / 20:
-                            valeur *= (note.duree * self.sample_rate / 1000 - k) * 20 / self.sample_rate
+                    if note.duree * 60 * 250 // partition.bpm * self.sample_rate // 1000 < len(sample_shift[0]):
+                        if k >= note.duree * 60 * 250 // partition.bpm * self.sample_rate / 1000 - self.sample_rate / 20:
+                            valeur *= (note.duree * 60 * 250 // partition.bpm * self.sample_rate / 1000 - k) * 20 / self.sample_rate
                     else:
                         if k >= len(sample_shift[0]) - self.sample_rate / 20:
                             valeur *= (len(sample_shift[0]) - k) * 20 / self.sample_rate
@@ -92,8 +91,8 @@ class FichierWAV:
                     valeur += valeur ** 3
                     valeur *= 1 + 16 * k / self.sample_rate * math.exp(-6 * k / self.sample_rate)
                     valeur *= note.amplitude
-                    if k >= note.duree * self.sample_rate // 1000 - self.sample_rate / 20:
-                        valeur *= (note.duree * self.sample_rate / 1000 - k) / (self.sample_rate / 20)
+                    if k >= note.duree * 60 * 250 // partition.bpm * self.sample_rate // 1000 - self.sample_rate / 20:
+                        valeur *= (note.duree * 60 * 250 // partition.bpm * self.sample_rate / 1000 - k) / (self.sample_rate / 20)
 
                 if note.instrument == 2:   # xylophone
                     valeur = note.amplitude * math.sin(2 * math.pi * note.frequence * (k / self.sample_rate + offset))
@@ -109,30 +108,12 @@ class FichierWAV:
                     attenuation = 1 / 20
                     if k < self.sample_rate * attenuation:
                         valeur *= k / (self.sample_rate * attenuation)
-                    if k >= note.duree * self.sample_rate // 1000 - self.sample_rate * attenuation:
-                        valeur *= (note.duree * self.sample_rate / 1000 - k) / (self.sample_rate * attenuation)
+                    if k >= note.duree * 60 * 250 // partition.bpm * self.sample_rate // 1000 - self.sample_rate * attenuation:
+                        valeur *= (note.duree * 60 * 250 // partition.bpm * self.sample_rate / 1000 - k) / (self.sample_rate * attenuation)
                     valeur *= math.exp(-k / self.sample_rate)
 
-                self.echantillons[k + note.position * self.sample_rate // 1000][0] += int(valeur)
-                self.echantillons[k + note.position * self.sample_rate // 1000][1] += int(valeur)
-        # print(self.echantillons)
-
-    def interpolation(self):
-        self.sample_rate *= 2
-        n = len(self.echantillons)
-        nouveau = []
-        for i in range(0, n-1):
-            nouveau.append(self.echantillons[i])
-            nouveau.append([(self.echantillons[i][0] + self.echantillons[i+1][0]) // 2,
-                            (self.echantillons[i][1] + self.echantillons[i+1][1]) // 2])
-        nouveau.append(self.echantillons[-1])
-        nouveau.append(self.echantillons[-1])
-        self.echantillons = nouveau.copy()
-
-    def echo(self, delai, facteur):
-        for i in range(len(self.echantillons)-1, delai-1, -1):
-            self.echantillons[i][0] += int(self.echantillons[i-delai][0] * facteur)
-            self.echantillons[i][1] += int(self.echantillons[i-delai][1] * facteur)
+                self.echantillons[k + note.position * 60 * 250 // partition.bpm * self.sample_rate // 1000][0] += int(valeur)
+                self.echantillons[k + note.position * 60 * 250 // partition.bpm * self.sample_rate // 1000][1] += int(valeur)
 
 
 class Note:
@@ -148,8 +129,9 @@ class Note:
 
 class Partition:
 
-    def __init__(self, duree_totale):
+    def __init__(self, duree_totale, bpm):
         self.duree_totale = duree_totale
+        self.bpm = bpm
         self.liste_notes = []
 
     def ajouter(self, note):
@@ -158,13 +140,15 @@ class Partition:
     def ouvrir(self, chemin):
         with open(chemin, "r") as f:
             lignes = f.readlines()
-        for ligne in lignes:
+        self.bpm = int(lignes[0])
+        for ligne in lignes[1:]:
             frequence, numero_note, amplitude, duree, position, instrument = [int(i) for i in ligne.split(" ")]
             self.duree_totale = max(self.duree_totale, position+duree)
             self.ajouter(Note(frequence, numero_note, amplitude, duree, position, instrument))
 
     def sauvegarder(self, chemin):
         with open(chemin, "w") as f:
+            f.write("{}\n".format(self.bpm))
             for note in self.liste_notes:
                 f.write("{} {} {} {} {} {}\n".format(note.frequence, note.numero_note, note.amplitude, note.duree, note.position, note.instrument))
 
