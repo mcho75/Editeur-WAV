@@ -8,6 +8,7 @@ import os
 class Grille(tk.Canvas):
 
     def __init__(self, boss):
+        self.boss = boss
         self.longueur_totale = 400
         self.liste_rectangles = []
         self.rectangle_survole = None
@@ -15,7 +16,7 @@ class Grille(tk.Canvas):
         self.instrument_var = tk.IntVar()
         self.bpm = 60
 
-        tk.Canvas.__init__(self, boss, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
+        tk.Canvas.__init__(self, boss.fen, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
                            scrollregion=(0, 0, 5000, 1000))
         self.surbrillance = self.create_rectangle(0, 0, 0, 0, fill=palette["bg2"])
 
@@ -100,6 +101,8 @@ class Grille(tk.Canvas):
         self.dragging = 0
 
     def importer_partition(self, partition):
+        self.bpm = partition.bpm
+        self.boss.tempo.set(self.bpm)
         while len(self.liste_rectangles) > 0:
             self.delete(self.liste_rectangles[0].sprite)
             self.liste_rectangles.pop(0)
@@ -141,7 +144,7 @@ class Interface:
         style.map("TRadiobutton", background=[("active", palette["bg2"])])
         style.map("TScale", background=[("active", palette["fg2"])])
 
-        self.grille = Grille(self.fen)
+        self.grille = Grille(self)
         self.scrollbarx = ttk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, style="TScrollbar")
         self.scrollbary = ttk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, style="TScrollbar")
         self.grille.configure(xscrollcommand=self.scrollbarx.set, yscrollcommand=self.scrollbary.set)
