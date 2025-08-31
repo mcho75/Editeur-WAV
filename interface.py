@@ -6,8 +6,11 @@ import os
 
 
 class Grille(tk.Canvas):
+    """ Interface graphique contenant les differentes notes. """
 
     def __init__(self, boss):
+
+        # initialisation des variables locales
         self.boss = boss
         self.longueur_totale = 400
         self.liste_rectangles = []
@@ -16,91 +19,123 @@ class Grille(tk.Canvas):
         self.instrument_var = tk.IntVar()
         self.bpm = 60
 
-        tk.Canvas.__init__(self, boss.fen, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
-                           scrollregion=(0, 0, 5000, 1000))
-        self.surbrillance = self.create_rectangle(0, 0, 0, 0, fill=palette["bg2"])
-
-        self.bind("<MouseWheel>", self.scroll_vertical)
-        self.bind("<Shift-MouseWheel>", self.scroll_horizontal)
-        self.bind("<B1-ButtonRelease>", self.ajouter_note)
-        self.bind("<Motion>", self.deplacement_souris)
-        self.bind("<B1-Motion>", self.deplacement_clic)
-
+        # initialisation des parametres graphiques
         self.bordure = 20
         self.intitules = 100
         self.longueur_temps = 15
         self.hauteur = 20
 
+        # creation du canvas
+        tk.Canvas.__init__(self, boss.fen, width=800, height=500, bg=palette["bg1"], highlightthickness=0,
+                           scrollregion=(0, 0, 5000, 1000))
+        self.surbrillance = self.create_rectangle(0, 0, 0, 0, fill=palette["bg2"])
+
+        # ajout des interactions de la souris
+        self.bind("<MouseWheel>", self.scroll_vertical)            # scrolling vertical
+        self.bind("<Shift-MouseWheel>", self.scroll_horizontal)    # scrolling horizontal
+        self.bind("<B1-ButtonRelease>", self.ajouter_note)         # ajout d'une note apres un clic
+        self.bind("<Motion>", self.deplacement_souris)             # deplacement de la souris relachee
+        self.bind("<B1-Motion>", self.deplacement_clic)            # deplacement des bordures d'une note
+
         self.tracer_lignes()
 
     def deplacement_souris(self, event):
+        """ Deplacement de la souris sur la grille (relachee). """
+
         position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) / self.longueur_temps
         note = (round(self.canvasy(event.y)) - self.bordure) // self.hauteur
+
+        # deplacement du cadre de surbrillance sur la ligne du pointeur
         if (0 <= position < self.longueur_totale) and (0 <= note < len(notes)):
             pos_y = self.bordure + note * self.hauteur
             self.coords(self.surbrillance, self.bordure, pos_y, self.longueur_totale * self.longueur_temps + self.bordure + self.intitules, pos_y+self.hauteur)
+
+        # detection de la case sur laquelle se trouve la souris
         self.config(cursor="arrow")
         self.rectangle_survole = None
         for rectangle in self.liste_rectangles:
+            # pour chaque rectangle, on verifie si la souris est dessus
             if rectangle.note_encodage.position <= position < rectangle.note_encodage.position + rectangle.note_encodage.duree:
                 if rectangle.note_encodage.numero_note == note:
-                    self.config(cursor="hand1")
+                    self.config(cursor="hand1")                    # on est sur une note
                     self.rectangle_survole = rectangle
                     if position - (self.rectangle_survole.note_encodage.position + self.rectangle_survole.note_encodage.duree) > -0.3:
-                        self.config(cursor="sb_h_double_arrow")
+                        self.config(cursor="sb_h_double_arrow")    # on est sur la gauche d'une note
                     if position - rectangle.note_encodage.position < 0.3:
-                        self.config(cursor="sb_h_double_arrow")
+                        self.config(cursor="sb_h_double_arrow")    # on est sur la droite d'une note
 
     def deplacement_clic(self, event):
+        """ Deplacement de la souris sur la grille (cliquee). """
+
         position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) / self.longueur_temps
+
         if self.rectangle_survole is not None:
-            if self.dragging == 0:
+            if self.dragging == 0:       # on n'a pas encore commence a deplacer les bordures
                 if position - (self.rectangle_survole.note_encodage.position + self.rectangle_survole.note_encodage.duree) > -0.3:
                     self.dragging = 1
                 elif position - self.rectangle_survole.note_encodage.position < 0.3:
                     self.dragging = 2
-            elif self.dragging == 1:
+            elif self.dragging == 1:     # on deplace la bordure droite
                 self.rectangle_survole.note_encodage.duree = round(position) - self.rectangle_survole.note_encodage.position
                 self.rectangle_survole.actualiser()
-            elif self.dragging == 2:
+            elif self.dragging == 2:     # on deplace la bordure gauche
                 self.rectangle_survole.note_encodage.duree += self.rectangle_survole.note_encodage.position - round(position)
                 self.rectangle_survole.note_encodage.position = round(position)
                 self.rectangle_survole.actualiser()
 
     def scroll_horizontal(self, event):
+        """ Scroll horizontal de la grille. """
         self.xview_scroll(-event.delta//50, tk.UNITS)
 
     def scroll_vertical(self, event):
+        """ Scroll vertical de la grille. """
         self.yview_scroll(-event.delta//50, tk.UNITS)
 
     def tracer_lignes(self):
+        """ Ajout des lignes de la grille. """
+
         self.configure(scrollregion=(0, 0, (self.longueur_temps*self.longueur_totale)+self.intitules+(2*self.bordure), self.hauteur*len(notes)+(2*self.bordure)))
         self.create_line(self.bordure, self.bordure, self.bordure, self.hauteur*len(notes)+self.bordure, fill=palette["bg3"])
+
+        # ajout des lignes verticales
         for i in range(0, self.longueur_totale + 1):
             pos_x = i * self.longueur_temps + self.bordure + self.intitules
             self.create_line(pos_x, self.bordure, pos_x, self.hauteur*len(notes)+self.bordure, fill=[palette["bg2"], palette["bg3"]][i % 4 == 0])
+
+        # ajout des lignes horizontales
         for i in range(0, len(notes) + 1):
             pos_y = i * self.hauteur + self.bordure
             self.create_line(self.bordure, pos_y, self.longueur_totale*self.longueur_temps+self.intitules+self.bordure, pos_y, fill=palette["bg3"])
+
+        # ajout du nom des notes
         for i in range(len(notes)):
             self.create_text(self.bordure+self.intitules-10, self.bordure+self.hauteur*i+self.hauteur//2, text=notes[i][0], anchor=tk.E, fill=palette["fg1"])
 
     def ajouter_note(self, event):
+        """ Si possible, ajout ou suppression d'une note a l'emplacement du pointeur. """
+
         position = (round(self.canvasx(event.x)) - self.intitules - self.bordure) / self.longueur_temps
         note = (round(self.canvasy(event.y)) - self.bordure) // self.hauteur
+
         if self.dragging == 0:
+
+            # suppression d'une note
             if self.rectangle_survole is not None:
                 self.delete(self.rectangle_survole.sprite)
                 self.liste_rectangles.remove(self.rectangle_survole)
                 self.rectangle_survole = None
+
+            # ajout d'une note
             elif (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
                 print(position, notes[note][0])
                 self.liste_rectangles.append(RectangleNote(self, note, round(position), 1, self.instrument_var.get()))
                 self.rectangle_survole = self.liste_rectangles[-1]
                 winsound.Beep(notes[note][1], 60 * 250 // self.bpm)
+
         self.dragging = 0
 
     def importer_partition(self, partition):
+        """ Importation d'une partition fournie en argument. """
         self.bpm = partition.bpm
         self.boss.tempo.set(self.bpm)
         while len(self.liste_rectangles) > 0:
@@ -109,8 +144,19 @@ class Grille(tk.Canvas):
         for note in partition.liste_notes:
             self.liste_rectangles.append(RectangleNote(self, note.numero_note, note.position, note.duree, note.instrument))
 
+    def recuperer_notes(self):
+        """ Retourne la partition associee aux notes placees dans la grille. """
+        longueur_max = 0
+        for rectangle in self.liste_rectangles:
+            longueur_max = max(rectangle.note_encodage.position + rectangle.note_encodage.duree, longueur_max)
+        partition = encodage.Partition(longueur_max, self.bpm)
+        for rectangle in self.liste_rectangles:
+            partition.ajouter(rectangle.note_encodage)
+        return partition
+
 
 class RectangleNote:
+    """ Rectangle de la grille associe a une unique note. """
 
     def __init__(self, boss, numero_note, position, duree, instrument):
         self.boss = boss
@@ -119,20 +165,24 @@ class RectangleNote:
         self.actualiser()
 
     def actualiser(self):
+        """ Modification de la position du rectangle selon les parametres de la note associee. """
         pos_x = self.boss.bordure + self.boss.intitules + (self.note_encodage.position * self.boss.longueur_temps)
         pos_y = self.boss.bordure + self.note_encodage.numero_note * self.boss.hauteur
         self.boss.coords(self.sprite, pos_x, pos_y, pos_x+(self.boss.longueur_temps*self.note_encodage.duree), pos_y+self.boss.hauteur)
 
 
 class Interface:
+    """ Fenetre contenant la grille et les parametres. """
 
     def __init__(self):
 
+        # configuration de la fenetre
         self.fen = tk.Tk()
         self.fen.config(bg=palette["bg2"])
         self.fen.title("Editeur WAV")
         self.fen.resizable(False, False)
 
+        # configuration du style des differents widgets
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("TScrollbar", troughcolor=palette["bg2"], background=palette["fg1"], arrowcolor=palette["bg1"], bordercolor=palette["bg3"])
@@ -144,6 +194,7 @@ class Interface:
         style.map("TRadiobutton", background=[("active", palette["bg2"])])
         style.map("TScale", background=[("active", palette["fg2"])])
 
+        # creation des widgets
         self.grille = Grille(self)
         self.scrollbarx = ttk.Scrollbar(self.fen, orient=tk.HORIZONTAL, command=self.grille.xview, style="TScrollbar")
         self.scrollbary = ttk.Scrollbar(self.fen, orient=tk.VERTICAL, command=self.grille.yview, style="TScrollbar")
@@ -163,6 +214,7 @@ class Interface:
             ttk.Radiobutton(self.instruments, text=samples_noms[i], variable=self.grille.instrument_var, value=-1-i,
                             style="TRadiobutton").grid(row=len(instruments)+2+i, column=0, padx=10)
 
+        # placement des widgets dans la fenetre
         self.grille.grid(row=0, column=0, padx=(10, 0), pady=(10, 0))
         self.scrollbarx.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=tk.EW)
         self.scrollbary.grid(row=0, column=1, pady=10, sticky=tk.NS)
@@ -178,41 +230,40 @@ class Interface:
         self.tempo.set(60)
 
     def changer_tempo(self, event):
+        """ Changement du tempo via le slider. """
         self.grille.bpm = int(self.tempo.get() / 10) * 10
         print(self.grille.bpm)
 
     def ouvrir_fichier(self):
+        """ Ouverture d'un fichier .txt via une boite de dialogue. """
         chemin = filedialog.askopenfilename(title="Ouvrir", filetypes=[("Fichier texte", "*.txt"), ("Tous les fichiers", "*.*")])
         partition = encodage.Partition(0, 60)
         partition.ouvrir(chemin)
         self.grille.importer_partition(partition)
 
     def sauvegarder_fichier(self):
+        """ Enregistrement d'un fichier via une boite de dialogue. """
         chemin = filedialog.asksaveasfilename(title="Enregistrer", filetypes=[("Fichier texte", "*.txt"), ("Tous les fichiers", "*.*")],
                                               defaultextension=".txt")
-        partition = self.recuperer_notes()
+        partition = self.grille.recuperer_notes()
         partition.sauvegarder(chemin)
 
-    def recuperer_notes(self):
-        longueur_max = 0
-        for rectangle in self.grille.liste_rectangles:
-            longueur_max = max(rectangle.note_encodage.position + rectangle.note_encodage.duree, longueur_max)
-        partition = encodage.Partition(longueur_max, self.grille.bpm)
-        for rectangle in self.grille.liste_rectangles:
-            partition.ajouter(rectangle.note_encodage)
-        return partition
-
     def exporter_son(self):
+        """ Exportation du son via une boite de dialogue. """
+        chemin = filedialog.asksaveasfilename(title="Exporter", filetypes=[("Fichier .wav", "*.wav"), ("Tous les fichiers", "*.*")],
+                                              defaultextension=".wav")
         self.changer_tempo(None)
         fichier = encodage.FichierWAV()
         fichier.convertir_notes(self.recuperer_notes(), samples, notes_associees)
-        fichier.ecrire("test.wav")
-        os.startfile("test.wav")
+        fichier.ecrire(chemin)
+        os.startfile(chemin)
 
     def lancer(self):
+        """ Lancement de l'interface graphique. """
         self.fen.mainloop()
 
 
+# variables globales du projet
 palette = {"bg1":"#2B2B2B", "bg2":"#313335", "bg3":"#3C3F41", "fg1":"#A5A59D", "fg2":"#CCCCC2",
            "instrument-1":"#001219", "instrument-2":"#005f73", "instrument-3":"#0a9396", "instrument-4":"#94d2bd",
            "instrument-5":"#e9d8a6", "instrument-6":"#ee9b00", "instrument-7":"#ca6702", "instrument-8":"#bb3e03",
@@ -226,12 +277,13 @@ samples_noms = ["Basse", "Chœur", "Clap", "Guitare", "Piano", "Tambour", "Violo
 notes_associees = [246, 526, 819, 518, 527, 160, 785]
 samples = encodage.recuperer_samples(samples_str)
 
+# calcul des frequences avec le nom associe
 note_names_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 note_names_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 notes = []
 for n in range(0, 120):
     octave = (n // 12) - 1
     name = note_names_en[n % 12] + str(octave) + " / " + note_names_fr[n % 12] + str(octave)
-    freq = round(440 * 2 ** ((n - 69) / 12))
-    notes.append((name, freq))
+    frequence = round(440 * 2 ** ((n - 69) / 12))
+    notes.append((name, frequence))
 notes.reverse()
