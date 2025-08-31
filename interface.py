@@ -128,7 +128,7 @@ class Grille(tk.Canvas):
             # ajout d'une note
             elif (0 <= position < self.longueur_totale * 4) and (0 <= note < len(notes)):
                 print(position, notes[note][0])
-                self.liste_rectangles.append(RectangleNote(self, note, round(position), 1, self.instrument_var.get()))
+                self.liste_rectangles.append(RectangleNote(self, note, int(position), 1, self.instrument_var.get()))
                 self.rectangle_survole = self.liste_rectangles[-1]
                 winsound.Beep(notes[note][1], 60 * 250 // self.bpm)
 
