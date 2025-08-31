@@ -254,7 +254,7 @@ class Interface:
                                               defaultextension=".wav")
         self.changer_tempo(None)
         fichier = encodage.FichierWAV()
-        fichier.convertir_notes(self.recuperer_notes(), samples, notes_associees)
+        fichier.convertir_notes(self.grille.recuperer_notes(), samples, notes_associees)
         fichier.ecrire(chemin)
         os.startfile(chemin)
 
