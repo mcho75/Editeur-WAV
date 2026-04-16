@@ -180,6 +180,7 @@ class Interface:
         self.fen = tk.Tk()
         self.fen.config(bg=palette["bg2"])
         self.fen.title("Editeur WAV")
+        self.fen.iconbitmap("images/icon.ico")
         self.fen.resizable(False, False)
 
         # configuration du style des differents widgets
